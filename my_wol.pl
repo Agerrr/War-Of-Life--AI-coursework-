@@ -78,12 +78,20 @@ count_elements([_|T], E, R) :-
 bloodlust(Color, Board, NewBoard, Move) :-
 	find_best_move(Color, Board, bloodlust, NewBoard, Move).
 
+self_preservation(Color, Board, NewBoard, Move) :-
+	find_best_move(Color, Board, self_preservation, NewBoard, Move).
+
+land_grab(Color, Board, NewBoard, Move) :-
+	find_best_move(Color, Board, land_grab, NewBoard, Move).
+
+
 possible_moves(Alive,OtherPlayerAlive, PossMoves) :-
 	findall([A,B,MA,MB],(member([A,B], Alive),
                              neighbour_position(A,B,[MA,MB]),
                              \+member([MA,MB],Alive),
                              \+member([MA,MB],OtherPlayerAlive)),
                  PossMoves).
+
 /* decompose_board(+Color,+Board,-Alives,-OpponentsAlives) */
 decompose_board('r', [B,R], R,B).
 decompose_board('b', [B,R], B,R).
@@ -104,11 +112,23 @@ find_maximizing_move([Move|Moves], Color, Board, Strategy, BestMove, BestMoveGoa
                 (BestMove=OldBestMove,BestMoveGoal=OldBestMoveGoal)
 	).
 
-
+/* Score is the number of opponent's pieces on the board. */
 calculate_score(Color, Board, bloodlust, Score) :-
 	decompose_board(Color,Board,_,OpponentsAlive),
 	length(OpponentsAlive, OpponentNodes),
 	Score is -OpponentNodes.
+
+/* Score is the number of player's pieces on the board. */
+calculate_score(Color, Board, self_preservation, Score) :-
+	decompose_board(Color, Board, Alives, _),
+	length(Alives, Score).
+
+/* Score is the number of player's pieces - number of opponent's pieces. */
+calculate_score(Color, Board, land_grab, Score) :-
+	decompose_board(Color, Board, Alives, OpponentsAlive),
+	length(OpponentsAlive, OpponentNodes),
+	length(Alives, AliveNodes),
+	Score is AliveNodes-OpponentNodes.
 
 find_best_move(Color,Board,Strategy, NewBoard, Move) :-
 	decompose_board(Color,Board,Alive,OpponentsAlive),
