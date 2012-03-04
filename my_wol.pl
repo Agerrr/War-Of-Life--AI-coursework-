@@ -1,6 +1,8 @@
 :- use_module(library(system)).
 
 
+/* START OF TASK 3 */
+
 test_strategy(0, _, _) :-
   !.
 
@@ -69,4 +71,48 @@ count_elements([E|T],E,NewR) :-
 	NewR is R+1.
 count_elements([_|T], E, R) :-
 	count_elements(T,E,R).
-	
+
+
+/* START OF TASK 4 */
+
+bloodlust(Color, Board, NewBoard, Move) :-
+	find_best_move(Color, Board, bloodlust, NewBoard, Move).
+
+possible_moves(Alive,OtherPlayerAlive, PossMoves) :-
+	findall([A,B,MA,MB],(member([A,B], Alive),
+                             neighbour_position(A,B,[MA,MB]),
+                             \+member([MA,MB],Alive),
+                             \+member([MA,MB],OtherPlayerAlive)),
+                 PossMoves).
+/* decompose_board(+Color,+Board,-Alives,-OpponentsAlives) */
+decompose_board('r', [B,R], R,B).
+decompose_board('b', [B,R], B,R).
+
+compose_board('r',Alives,OpponentAlives,[OpponentAlives,Alives]).
+compose_board('b',Alives,OpponentAlives,[Alives,OpponentAlives]).
+
+find_maximizing_move([],_,_,_,'u','u').
+find_maximizing_move([Move|Moves], Color, Board, Strategy, BestMove, BestMoveGoal) :-
+	decompose_board(Color,Board,Alives,OpponentAlives),
+	alter_board(Move,Alives,NewAlives),
+	compose_board(Color,NewAlives,OpponentAlives,NewBoard),
+	next_generation(NewBoard,NewGeneratedBoard),
+	calculate_score(Color, NewGeneratedBoard,Strategy,MoveGoal),
+	find_maximizing_move(Moves,Color,Board,Strategy, OldBestMove, OldBestMoveGoal),
+	((OldBestMoveGoal=='u';OldBestMoveGoal<MoveGoal) ->
+		(BestMove=Move, BestMoveGoal=MoveGoal) ;
+                (BestMove=OldBestMove,BestMoveGoal=OldBestMoveGoal)
+	).
+
+
+calculate_score(Color, Board, bloodlust, Score) :-
+	decompose_board(Color,Board,_,OpponentsAlive),
+	length(OpponentsAlive, OpponentNodes),
+	Score is -OpponentNodes.
+
+find_best_move(Color,Board,Strategy, NewBoard, Move) :-
+	decompose_board(Color,Board,Alive,OpponentsAlive),
+	possible_moves(Alive, OpponentsAlive, Moves),
+	find_maximizing_move(Moves, Color, Board, Strategy, Move, _),
+       	alter_board(Move, Alive, NewAlive),
+	compose_board(Color, NewAlive, OpponentsAlive, NewBoard).
