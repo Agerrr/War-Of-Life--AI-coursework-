@@ -99,6 +99,7 @@ decompose_board('b', [B,R], B,R).
 compose_board('r',Alives,OpponentAlives,[OpponentAlives,Alives]).
 compose_board('b',Alives,OpponentAlives,[Alives,OpponentAlives]).
 
+/* Returns best move for the given Strategy. */
 find_maximizing_move([],_,_,_,'u','u').
 find_maximizing_move([Move|Moves], Color, Board, Strategy, BestMove, BestMoveGoal) :-
 	decompose_board(Color,Board,Alives,OpponentAlives),
@@ -130,6 +131,8 @@ calculate_score(Color, Board, land_grab, Score) :-
 	length(Alives, AliveNodes),
 	Score is AliveNodes-OpponentNodes.
 
+/* Given Color and Board find_best_move finds best move according to given Strategy
+   and returns this Move and board configuration. */
 find_best_move(Color,Board,Strategy, NewBoard, Move) :-
 	decompose_board(Color,Board,Alive,OpponentsAlive),
 	possible_moves(Alive, OpponentsAlive, Moves),
