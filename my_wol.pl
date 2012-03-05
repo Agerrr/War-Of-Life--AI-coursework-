@@ -3,10 +3,14 @@
 
 /* START OF TASK 3 */
 
+/* Available levels: quiet, verbose */
+log_level(verbose).
+
 test_strategy(0, _, _) :-
   !.
 
 test_strategy(N, AStrategy, BStrategy) :-
+	format('Comparing ~w (P1) with ~w (P2):~n~n',[AStrategy, BStrategy]),
 	now(StartTime),
 	test_strategy(N,AStrategy,BStrategy,Moves,Wins),
 	now(EndTime),
@@ -24,12 +28,13 @@ test_strategy(N, AStrategy, BStrategy) :-
         format('Average game length (including exhaustives): ~w~n',[R5]),
 	R6 is (EndTime-StartTime)*1000/N,
 	Acc is 1000/(sqrt(N)), 
-	format('Average game time: ~w +/- ~w ms',[R6,Acc]).
+	format('Average game time: ~w +/- ~w ms~n~n',[R6,Acc]).
 
 test_strategy(0,_,_,[],[]).
 test_strategy(N,AStrategy,BStrategy,[NumMoves|Moves],[Winner|Wins]) :-
 	N>0,
-	play(verbose,AStrategy,BStrategy, NumMoves, Winner),
+	log_level(LogLevel),
+	play(LogLevel,AStrategy,BStrategy, NumMoves, Winner),
 	NewN is N-1,
 	test_strategy(NewN,AStrategy,BStrategy, Moves,Wins).	
 
@@ -76,14 +81,16 @@ count_elements([_|T], E, R) :-
 /* START OF TASK 4 */
 
 bloodlust(Color, Board, NewBoard, Move) :-
-	find_best_move(Color, Board, bloodlust, NewBoard, Move).
+	find_best_move(Color, Board, bloodlust, NewBoard, Move,_).
 
 self_preservation(Color, Board, NewBoard, Move) :-
-	find_best_move(Color, Board, self_preservation, NewBoard, Move).
+	find_best_move(Color, Board, self_preservation, NewBoard, Move, _).
 
 land_grab(Color, Board, NewBoard, Move) :-
-	find_best_move(Color, Board, land_grab, NewBoard, Move).
+	find_best_move(Color, Board, land_grab, NewBoard, Move, _).
 
+minimax(Color, Board, NewBoard, Move) :-
+	find_best_move(Color, Board, minimax, NewBoard, Move, _).
 
 possible_moves(Alive,OtherPlayerAlive, PossMoves) :-
 	findall([A,B,MA,MB],(member([A,B], Alive),
@@ -98,6 +105,9 @@ decompose_board('b', [B,R], B,R).
 
 compose_board('r',Alives,OpponentAlives,[OpponentAlives,Alives]).
 compose_board('b',Alives,OpponentAlives,[Alives,OpponentAlives]).
+
+opponent('r','b').
+opponent('b','r').
 
 /* Returns best move for the given Strategy. */
 find_maximizing_move([],_,_,_,'u','u').
@@ -131,11 +141,26 @@ calculate_score(Color, Board, land_grab, Score) :-
 	length(Alives, AliveNodes),
 	Score is AliveNodes-OpponentNodes.
 
+/* Returns minimum possible landgrab that we could get after opponents move,
+   so in other words we want to maximize landgrab of opponent and take it 
+   with negative value sign. */
+
+/* If opponent has no pieces, minmum landgrab player must gain is number of his pieces */ 
+calculate_score(Color, Board, minimax, Score) :-
+	decompose_board(Color,Board, Alives, []),
+	!,
+	length(Alives, Score).
+
+calculate_score(Color, Board, minimax, Score) :-
+	opponent(Color, OpponentsColor),
+	find_best_move(OpponentsColor, Board, land_grab, _, _, OpponentsMaxLandgrab),
+	Score is -OpponentsMaxLandgrab. 
+
 /* Given Color and Board find_best_move finds best move according to given Strategy
    and returns this Move and board configuration. */
-find_best_move(Color,Board,Strategy, NewBoard, Move) :-
+find_best_move(Color,Board,Strategy, NewBoard, Move, Score) :-
 	decompose_board(Color,Board,Alive,OpponentsAlive),
 	possible_moves(Alive, OpponentsAlive, Moves),
-	find_maximizing_move(Moves, Color, Board, Strategy, Move, _),
+	find_maximizing_move(Moves, Color, Board, Strategy, Move, Score),
        	alter_board(Move, Alive, NewAlive),
 	compose_board(Color, NewAlive, OpponentsAlive, NewBoard).
